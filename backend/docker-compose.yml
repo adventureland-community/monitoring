@@ -1,0 +1,35 @@
+version: "2.1"
+
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.81.2
+    container_name: victoriametrics
+    volumes:
+      - ./data/victoriametrics:/etc/victoriametrics
+      - ./data/storage/victoriametrics:/victoria-metrics-data
+    command:
+      - "-retentionPeriod=10y"
+      - "-promscrape.config=/etc/victoriametrics/prometheus.yml"
+      - "-promscrape.config.strictParse=false"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:9.1.5
+    container_name: grafana
+    volumes:
+      - ./data/storage/grafana:/var/lib/grafana
+      - ./data/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=<user name here>
+      - GF_SECURITY_ADMIN_PASSWORD=<your password here>
+      - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
+  
+  loki:
+    image: grafana/loki:2.6.0
+    container_name: loki
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./data/loki:/etc/loki
+      - ./data/storage/loki:/tmp/loki
+    restart: unless-stopped
