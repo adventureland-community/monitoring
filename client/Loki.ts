@@ -1,7 +1,8 @@
-import { ObjectOf } from "@telokys/ts-meta-types";
+import { trim_entity } from "./helpers/trim_entity";
+import { safe_stringify } from "./helpers/safe_stringify";
 import { prom } from "./prom";
 
-type LabelMap = ObjectOf<string>;
+type LabelMap = Record<string, string>;
 type Data = Record<string, unknown>;
 
 class Loki {
@@ -48,7 +49,7 @@ class Loki {
             this.streams[hash] = [labels, []];
         }
 
-        this.streams[hash][1].push([`${time}000000`, JSON.stringify(obj)]);
+        this.streams[hash][1].push([`${time}000000`, safe_stringify(obj)]);
     }
 
     /**
@@ -106,9 +107,42 @@ const loki = new Loki({
 
 export { loki };
 
+character.on("hit", (data) => {
+    // If we are quick enough, the entity is still there.
+    const entity = parent.entities[data.actor];
+
+    loki.log({
+        component: "hit",
+        entity: entity ? trim_entity(entity) : null,
+        data,
+    });
+
+    if (data.kill) {
+        loki.log({
+            component: "death",
+            entity: entity ? trim_entity(entity) : null,
+            data,
+        });
+    }
+});
+
+// Never worked and I don't know why. I use "hit" with data.kill instead.
+// game.on("death", (data) => {
+//     if (data.id === character.name) {
+//         loki.log({ component: "death", data });
+//     }
+// });
+
+game.on("mluck", (data) => {
+    if (data.name === character.name) {
+        loki.log({ component: "mluck", data });
+    }
+});
+
 // ======================
 
-export const PUBLISH_INTERVAL_LOKI = 1000 * 15; // 15s
+// Publishing every second.
+export const PUBLISH_INTERVAL_LOKI = 1000 * 1;
 
 export async function publish_loki() {
     await prom.postWithAuth(LOKI_POST_URL, loki.getJSON(), `Basic ${LOKI_AUTH_TOKEN}`);

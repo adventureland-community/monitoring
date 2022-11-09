@@ -114,22 +114,51 @@ export const sales_gold = new prom.ServerCounter({
     labelNames: ["to"],
 });
 
+export const ping = new prom.ServerGauge({
+    name: "al_ping_seconds",
+    help: "How is the ping with the server",
+    collect() {
+        this.set(parent.pings.reduce((a, b) => a + b) / parent.pings.length / 1000);
+    },
+});
+
 // ======================
 //  Non-server metrics
 // ======================
 export const level = new prom.Gauge({
     name: "al_level_total",
     help: "How many levels my characters have",
+    collect() {
+        this.set(character.level);
+    },
 });
 
 export const exp = new prom.Gauge({
     name: "al_exp_total",
     help: "How many exp points my characters have",
+    collect() {
+        this.set(cumulatedXp[character.level] + character.xp);
+    },
 });
 
 export const gold = new prom.Gauge({
     name: "al_gold_total",
     help: "How much gold do I have",
+    collect() {
+        this.set(character.gold);
+    },
+});
+
+export const sent_gold = new prom.Counter({
+    name: "al_sent_gold_total",
+    help: "How much gold have I sent to others",
+    labelNames: ["to"],
+});
+
+export const received_gold = new prom.Counter({
+    name: "al_received_gold_total",
+    help: "How much gold have I received from others",
+    labelNames: ["from"],
 });
 
 export const failed_upgrades = new prom.Counter({
@@ -255,11 +284,24 @@ game.on("fbuy", ({ name, item }) => {
         .inc(calculate_item_value(item) * G.multipliers.lostandfound_mult);
 });
 
-character.on("death", (data) => {
-    if (!data.past) {
-        deaths.inc();
+character.on("gold_sent", (data) => {
+    if ("response" in data) {
+        sent_gold.inc({ to: data.name }, data.gold);
     }
 });
+
+character.on("gold_received", (data) => {
+    if ("response" in data) {
+        received_gold.inc({ from: data.name }, data.gold);
+    }
+});
+
+// Never worked and I don't know why. I use "hit" with data.kill instead.
+// game.on("death", (data) => {
+//     if (data.id === character.name) {
+//         deaths.inc();
+//     }
+// });
 
 character.on("loot", (data) => {
     looted_gold.inc(data.gold);
@@ -272,7 +314,7 @@ character.on("loot", (data) => {
                         item: item.name,
                         level: item.level ?? 0,
                     })
-                    .inc(1);
+                    .inc(item.q ?? 1);
             }
         }
     }
@@ -312,21 +354,17 @@ character.on("hit", (data) => {
             })
             .inc(data.damage);
     }
+
+    if (data.kill) {
+        deaths.inc();
+    }
 });
 
 // ======================
 
-export const PUBLISH_INTERVAL = 1000 * 15; // 15s
+export const PUBLISH_INTERVAL = 1000 * 1; // 1s
 
 export async function publish_metrics() {
-    // If you always keep GOLD_TO_KEEP on your chars, you can use the following instead
-    // gold.set(Math.max(0, character.gold - GOLD_TO_KEEP));
-
-    gold.set(character.gold);
-
-    level.set(character.level);
-    exp.set(cumulatedXp[character.level] + character.xp);
-
     await prom.pushToVM(METRICS_POST_URL, `Basic ${METRICS_AUTH_TOKEN}`);
 }
 

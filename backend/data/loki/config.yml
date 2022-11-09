@@ -40,11 +40,21 @@ compactor:
   retention_enabled: true
   retention_delete_delay: 2h
   retention_delete_worker_count: 150
+  deletion_mode: filter-and-delete
+
+query_scheduler:
+  max_outstanding_requests_per_tenant: 2048
+
+query_range:
+  parallelise_shardable_queries: false
+  split_queries_by_interval: 0
 
 limits_config:
+  ingestion_rate_mb: 512
+  ingestion_burst_size_mb: 1024
   enforce_metric_name: false
   reject_old_samples: true
-  reject_old_samples_max_age: 168h
+  reject_old_samples_max_age: 7d
   retention_period: 10y
 
 chunk_store_config:

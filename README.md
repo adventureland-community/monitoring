@@ -9,6 +9,22 @@ I use the [`docker-compose.yml`](backend/docker-compose.yml) to deploy:
 
 Then everything is handled in pure JS code where I defined several custom metrics that I then update. And I will push the state of my metrics every 15s from each character independently.
 
+## Table of contents
+
+- [Adventure Land monitoring toolkit](#adventure-land-monitoring-toolkit)
+  - [Introduction](#introduction)
+  - [Table of contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Grafana](#grafana)
+  - [Loki](#loki)
+    - [Example of Loki logs I store](#example-of-loki-logs-i-store)
+  - [Provided metrics](#provided-metrics)
+  - [More metrics](#more-metrics)
+    - [Compound:](#compound)
+    - [Upgrade:](#upgrade)
+    - [Looted chests:](#looted-chests)
+    - [Used skills:](#used-skills)
+
 ## Overview
 
 Inside `backend` you will find the `docker-compose` and its requirements defining the services that need to be started:
@@ -67,6 +83,65 @@ Take a look at the [official Loki documentation](https://grafana.com/docs/loki/l
 Be careful of how many logs you store because they will take space on your filesystem. By default, I've set Loki to store logs for ten (10) years.  
 Make sure to ask me or create an issue if you have any question.
 
+You can also decide to store all logs into Loki without using the json format. For example, I have the following function:
+
+```ts
+/** With this function I will log to the game logs and to Loki at the same time. */
+export function xlog_error(msg) {
+    loki.log({ level: "error", component: "xlog" }, msg);
+
+    return log(msg, COLOR_ERROR);
+}
+```
+
+### Example of Loki logs I store
+
+```ts
+    loki.log({
+        component: "compound",
+        item: { name: item, level },
+        chance,
+        scroll: needed_scroll,
+        offering,
+        success: result.success,
+    });
+```
+
+```ts
+    loki.log({
+        component: "upgrade",
+        item: { name: item, level },
+        chance,
+        scroll: needed_scroll,
+        offering,
+        success: result.success,
+    });
+```
+
+```ts
+    loki.log({
+        component: "upgrade",
+        fn: "i_want_base_item",
+        item: { name: item },
+        target_level,
+        failures,
+        spent,
+        duration: `${duration}ms`,
+    });
+```
+
+```ts
+    loki.log({
+        component: "upgrade",
+        fn: "i_want_base_item",
+        item: { name: item },
+        target_level,
+        failures,
+        spent,
+        duration: `${duration}ms`,
+    });
+```
+
 ## Provided metrics
 
 Below is a list of the currently created metrics.
@@ -92,6 +167,9 @@ Below is a list of the currently created metrics.
 * `al_success_upgrades_total`: How many upgrades I did successfully.
 * `al_failed_compounds_total`: How many compounds I failed.
 * `al_success_compounds_total`: How many compounds I did successfully.
+* `al_ping_seconds`: Observations of the ping.
+* `al_sent_gold_total`: How many gold I've sent.
+* `al_received_gold_total`: How many gold I've received.
 
 ## More metrics
 
