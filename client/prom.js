@@ -507,7 +507,11 @@ const prom = (() => {
         Gauge: a("jxOKZ"),
         postData: n,
         async postWithAuth(e, t, s) {
-            return await n(e, t, { authorization: s });
+            if (s) {
+                return await n(e, t, { authorization: s });
+            }
+
+            return await n(e, t);
         },
         async pushToVM(e, t) {
             return await l.postWithAuth(e, await l.register.metrics(), t);
