@@ -4,6 +4,7 @@ services:
     victoriametrics:
         image: victoriametrics/victoria-metrics:v1.81.2
         container_name: victoriametrics
+        user: "0"
         ports:
             - "8428:8428"
         volumes:
@@ -19,6 +20,7 @@ services:
     grafana:
         image: grafana/grafana:9.1.5
         container_name: grafana
+        user: "0"
         ports:
             - "3000:3000"
         volumes:
@@ -34,6 +36,7 @@ services:
         image: grafana/loki:2.6.0
         container_name: loki
         command: -config.file=/etc/loki/config.yml
+        user: "0"
         ports:
             - "3100:3100"
         volumes:
